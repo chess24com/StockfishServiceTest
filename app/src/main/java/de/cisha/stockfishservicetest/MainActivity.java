@@ -13,6 +13,7 @@ import android.os.RemoteException;
 import android.support.v7.app.AppCompatActivity;
 import android.support.v7.widget.Toolbar;
 import android.text.InputType;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
@@ -28,6 +29,8 @@ import static de.cisha.stockfishservice.StockfishService.MSG_KEY;
 
 public class MainActivity extends AppCompatActivity {
 
+    private static final String TAG = "StockfishServiceTest";
+
     @BindView(R.id.incoming_text)
     TextView mIncomingText;
 
@@ -37,7 +40,8 @@ public class MainActivity extends AppCompatActivity {
     @OnClick(R.id.fab)
     public void crashService(View view) {
         mIncomingText.setText(mIncomingText.getText() + "Crashing service...\n");
-        // TODO
+        // TODO implement
+        mIncomingText.setText(mIncomingText.getText() + "Not implemented yet.\n");
     }
 
     @BindView(R.id.toolbar)
@@ -56,7 +60,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     void setUpEditText(EditText editText) {
-        editText.setInputType(InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+        editText.setInputType(InputType.TYPE_CLASS_TEXT);
         editText.setImeActionLabel("Send", EditorInfo.IME_ACTION_SEND);
         editText.setImeOptions(EditorInfo.IME_ACTION_SEND);
         editText.setLines(1);
@@ -84,6 +88,8 @@ public class MainActivity extends AppCompatActivity {
         Bundle bundle = new Bundle();
         bundle.putString(StockfishService.MSG_KEY, cmd);
         Message msg = Message.obtain();
+        Log.v(TAG, "sending message: " + cmd);
+        msg.replyTo = mMessenger;
         msg.setData(bundle);
         try {
             mService.send(msg);
@@ -100,13 +106,17 @@ public class MainActivity extends AppCompatActivity {
     class IncomingHandler extends Handler {
         @Override
         public void handleMessage(Message msg) {
+            Log.v(TAG, "incoming message");
             Bundle data = msg.peekData();
             if (data == null) {
+                Log.d(TAG, "data is null");
                 super.handleMessage(msg);
                 return;
             }
+            data.setClassLoader(Thread.currentThread().getContextClassLoader());
             String line = data.getString(MSG_KEY);
             if (line == null) {
+                Log.d(TAG, "line is null");
                 super.handleMessage(msg);
                 return;
             }
@@ -132,9 +142,6 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    /**
-     * Target we publish for clients to send messages to IncomingHandler.
-     */
     final Messenger mMessenger = new Messenger(new IncomingHandler());
 
     private ServiceConnection mConnection = new ServiceConnection() {
